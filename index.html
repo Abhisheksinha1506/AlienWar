@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AlienWar Survival Game</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      font-family: 'Courier New', monospace; 
+      background-color: #1a1a1a; 
+      color: #ffffff;
+      margin: 20px;
+    }
+    canvas { 
+      border: 2px solid #ffffff; 
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+    h1 { color: #00ff00; }
+    p { color: #cccccc; }
+    .settings { 
+      display: flex; 
+      gap: 10px; 
+      margin-bottom: 10px; 
+    }
+    select, button { 
+      font-family: 'Courier New', monospace; 
+      background-color: #333; 
+      color: #fff; 
+      border: 1px solid #00ff00; 
+      padding: 5px; 
+      cursor: pointer; 
+    }
+    button:hover { background-color: #00ff00; color: #000; }
+  </style>
+</head>
+<body>
+  <h1>AlienWar Survival Game</h1>
+  <p>Use arrow keys to move (hold for continuous movement). Survive as long as possible!</p>
+  <div class="settings">
+    <label>Grid Size: 
+      <select id="gridSize">
+        <option value="10">Small (10x10)</option>
+        <option value="20" selected>Medium (20x20)</option>
+        <option value="30">Large (30x30)</option>
+      </select>
+    </label>
+    <label>Game Speed: 
+      <select id="gameSpeed">
+        <option value="45">Slow</option>
+        <option value="30" selected>Normal</option>
+        <option value="15">Fast</option>
+      </select>
+    </label>
+    <button onclick="applySettings()">Apply</button>
+  </div>
+  <script>
+    let GRID_SIZE = 20;
+    let CELL_SIZE = 30;
+    const MAX_CANVAS_WIDTH = 600;
+    let UPDATE_INTERVAL = 30;
+    let grid = [];
+    let player = { x: 9, y: 9, displayX: 9, displayY: 9 };
+    let aliens = [];
+    let score = 0;
+    let scoreScale = 1;
+    let gameOver = false;
+    let gameOverAlpha = 0;
+    let hitFlash = 0;
+    let starfield = [];
+    let moveCooldown = 0; // Cooldown for continuous movement
+    const MOVE_DELAY = 10; // Frames between moves when holding key
+
+    function setup() {
+      CELL_SIZE = Math.min(MAX_CANVAS_WIDTH / GRID_SIZE, 30);
+      createCanvas(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+      for (let i = 0; i < GRID_SIZE; i++) {
+        grid[i] = [];
+        for (let j = 0; j < GRID_SIZE; j++) {
+          grid[i][j] = Math.random() < 0.1 ? 'W' : '.';
+        }
+      }
+      player.x = Math.floor(GRID_SIZE / 2);
+      player.y = Math.floor(GRID_SIZE / 2);
+      player.displayX = player.x;
+      player.displayY = player.y;
+      grid[player.y][player.x] = 'P';
+      spawnAlien();
+      for (let i = 0; i < 50; i++) {
+        starfield.push({
+          x: random(width),
+          y: random(height),
+          size: random(1, 3),
+          speed: random(0.5, 2)
+        });
+      }
+    }
+
+    function applySettings() {
+      GRID_SIZE = parseInt(document.getElementById('gridSize').value);
+      UPDATE_INTERVAL = parseInt(document.getElementById('gameSpeed').value);
+      player = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), displayX: Math.floor(GRID_SIZE / 2), displayY: Math.floor(GRID_SIZE / 2) };
+      aliens = [];
+      score = 0;
+      scoreScale = 1;
+      gameOver = false;
+      gameOverAlpha = 0;
+      hitFlash = 0;
+      moveCooldown = 0;
+      starfield = [];
+      setup();
+    }
+
+    function draw() {
+      // Update starfield
+      for (let star of starfield) {
+        star.y += star.speed;
+        if (star.y > height) star.y -= height;
+      }
+      // Draw background and starfield
+      background(10, 10, 30);
+      noStroke();
+      fill(255, 255, 255, 100);
+      for (let star of starfield) {
+        ellipse(star.x, star.y, star.size, star.size);
+      }
+      // Draw hit flash effect
+      if (hitFlash > 0) {
+        fill(255, 0, 0, hitFlash);
+        rect(0, 0, width, height);
+        hitFlash -= 10;
+      }
+      // Draw grid lines
+      stroke(255, 255, 255, 50);
+      strokeWeight(1);
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        line(i * CELL_SIZE, 0, i * CELL_SIZE, height);
+        line(0, i * CELL_SIZE, width, i * CELL_SIZE);
+      }
+      // Update player display position
+      player.displayX = lerp(player.displayX, player.x, 0.2);
+      player.displayY = lerp(player.displayY, player.y, 0.2);
+      // Check for nearby aliens
+      let alienNearby = aliens.some(alien => Math.abs(alien.x - player.x) + Math.abs(alien.y - player.y) <= 2);
+      // Draw game elements
+      for (let i = 0; i < GRID_SIZE; i++) {
+        for (let j = 0; j < GRID_SIZE; j++) {
+          let x = j * CELL_SIZE;
+          let y = i * CELL_SIZE;
+          if (grid[i][j] === 'W') {
+            fill(80, 80, 80);
+            rect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 5);
+            for (let n = 0; n < 10; n++) {
+              fill(100, 100, 100, 50);
+              ellipse(x + random(CELL_SIZE - 8) + 4, y + random(CELL_SIZE - 8) + 4, 2);
+            }
+            stroke(150, 150, 150);
+            strokeWeight(2);
+            rect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8, 3);
+            noStroke();
+          } else if (grid[i][j] === 'P') {
+            let px = player.displayX * CELL_SIZE + CELL_SIZE / 2;
+            let py = player.displayY * CELL_SIZE + CELL_SIZE / 2;
+            fill(0, 100, 255);
+            ellipse(px, py, CELL_SIZE * 0.6);
+            fill(0, 200, 255, 150);
+            ellipse(px, py, CELL_SIZE * 0.8);
+            fill(255, 255, 255);
+            ellipse(px, py - CELL_SIZE / 4, CELL_SIZE * 0.2);
+          } else if (grid[i][j] === 'A') {
+            let pulse = sin(frameCount * 0.1) * 0.1 + 1;
+            fill(200, 0, 0);
+            beginShape();
+            vertex(x + CELL_SIZE / 2, y + CELL_SIZE / 4 * pulse);
+            vertex(x + CELL_SIZE / 4 * pulse, y + CELL_SIZE * 3 / 4);
+            vertex(x + CELL_SIZE / 2, y + CELL_SIZE / 2 * pulse);
+            vertex(x + CELL_SIZE * 3 / 4 * pulse, y + CELL_SIZE * 3 / 4);
+            endShape(CLOSE);
+            fill(255, 0, 0, 150);
+            ellipse(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE * 0.5 * pulse);
+          }
+        }
+      }
+      // Draw score
+      scoreScale = lerp(scoreScale, 1, 0.1);
+      textSize(20 * scoreScale);
+      textAlign(LEFT);
+      fill(0, 255, 0);
+      text(`Score: ${score}`, 10, 30);
+      // Game over screen
+      if (gameOver) {
+        gameOverAlpha = min(gameOverAlpha + 5, 200);
+        fill(0, 0, 0, gameOverAlpha);
+        rect(0, 0, width, height);
+        textSize(40);
+        textAlign(CENTER);
+        fill(255, 0, 0, gameOverAlpha);
+        text('GAME OVER', width / 2, height / 2 - 40);
+        fill(255, gameOverAlpha);
+        text(`Score: ${score}`, width / 2, height / 2);
+        textSize(20);
+        fill(200, 200, 200, gameOverAlpha);
+        text('Press R to Restart', width / 2, height / 2 + 40);
+      }
+      // Update game state
+      if (!gameOver && frameCount % UPDATE_INTERVAL === 0) {
+        updateGame();
+        if (alienNearby) hitFlash = 100;
+      }
+      // Handle continuous movement
+      if (!gameOver && moveCooldown <= 0) {
+        let newX = player.x;
+        let newY = player.y;
+        if (keyIsDown(LEFT_ARROW)) newX--;
+        else if (keyIsDown(RIGHT_ARROW)) newX++;
+        else if (keyIsDown(UP_ARROW)) newY--;
+        else if (keyIsDown(DOWN_ARROW)) newY++;
+        if (
+          newX >= 0 &&
+          newX < GRID_SIZE &&
+          newY >= 0 &&
+          newY < GRID_SIZE &&
+          grid[newY][newX] !== 'W'
+        ) {
+          grid[player.y][player.x] = '.';
+          player.x = newX;
+          player.y = newY;
+          grid[player.y][player.x] = 'P';
+          moveCooldown = MOVE_DELAY; // Reset cooldown
+        }
+      }
+      if (moveCooldown > 0) moveCooldown--;
+    }
+
+    function keyPressed() {
+      if (gameOver && (key === 'r' || key === 'R')) {
+        applySettings();
+        return;
+      }
+    }
+
+    function spawnAlien() {
+      let edges = [];
+      for (let i = 0; i < GRID_SIZE; i++) {
+        edges.push({ x: i, y: 0 });
+        edges.push({ x: i, y: GRID_SIZE - 1 });
+        edges.push({ x: 0, y: i });
+        edges.push({ x: GRID_SIZE - 1, y: i });
+      }
+      edges = edges.filter(pos => grid[pos.y][pos.x] === '.');
+      if (edges.length === 0) return;
+      let spawn = random(edges);
+      aliens.push(spawn);
+      grid[spawn.y][spawn.x] = 'A';
+    }
+
+    function updateGame() {
+      let newAliens = [];
+      for (let alien of aliens) {
+        grid[alien.y][alien.x] = '.';
+        let dx = player.x - alien.x;
+        let dy = player.y - alien.y;
+        let newX = alien.x;
+        let newY = alien.y;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          newX += dx > 0 ? 1 : -1;
+        } else if (dy !== 0) {
+          newY += dy > 0 ? 1 : -1;
+        }
+        if (newX === player.x && newY === player.y) {
+          gameOver = true;
+          return;
+        }
+        if (
+          newX >= 0 &&
+          newX < GRID_SIZE &&
+          newY >= 0 &&
+          newY < GRID_SIZE &&
+          grid[newY][newX] === '.'
+        ) {
+          newAliens.push({ x: newX, y: newY });
+          grid[newY][newX] = 'A';
+        } else {
+          newAliens.push(alien);
+          grid[alien.y][alien.x] = 'A';
+        }
+      }
+      aliens = newAliens;
+      if (random() < 0.33) {
+        spawnAlien();
+      }
+      score++;
+      scoreScale = 1.2;
+    }
+  </script>
+</body>
+</html>
