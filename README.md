@@ -23,6 +23,11 @@ A retro-style browser-based survival game built with p5.js where you navigate a 
 
 ### 🎨 Visual Design
 - **Retro Aesthetic**: Dark theme with neon green accents
+- **Enhanced Player Visibility**: 
+  - Larger character size (78% of cell size)
+  - Brighter blue body with inner highlights
+  - Pulsing cyan outer glow for high contrast on all grids
+  - White glint for a polished "gem" look
 - **Smooth Animations**: Fluid player movement with interpolation
 - **Visual Effects**: 
   - Animated starfield background
@@ -32,19 +37,20 @@ A retro-style browser-based survival game built with p5.js where you navigate a 
 
 ### ⚙️ Customization
 - **Grid Size Options**:
-  - Small (10x10) - Easy navigation
-  - Medium (20x20) - Balanced gameplay
-  - Large (30x30) - Challenging survival
+  - Small (10x10) - High density challenge
+  - Medium (20x20) - Balanced gameplay (Default)
+  - Large (30x30) - Strategic navigation
 - **Game Speed Settings**:
-  - Slow (45ms) - Relaxed pace
-  - Normal (30ms) - Standard difficulty
-  - Fast (15ms) - High-intensity action
+  - Slow (45ms) - ~1.3 ticks/s
+  - Normal (30ms) - ~2 ticks/s (Default)
+  - Fast (15ms) - ~4 ticks/s
 
 ### 🎮 Game Mechanics
 - **Intelligent AI**: Aliens use pathfinding to hunt the player
+- **Auto-Refocus**: Controls remain responsive even after interacting with settings menu
 - **Strategic Movement**: Navigate around walls and obstacles
 - **Dynamic Spawning**: New aliens spawn from grid edges
-- **Collision Detection**: Precise hit detection for game over
+- **Robust Collision**: Precise logic ensures fair game-over triggers
 - **Continuous Movement**: Hold keys for smooth, responsive controls
 
 ## 🚀 Quick Start
@@ -107,10 +113,12 @@ let score = 0;                // Current score
   - `'.'` = Empty space
 
 #### Movement System
-- **Smooth Interpolation**: Player position smoothly animates to target
+- **Smooth Interpolation**: Player position smoothly animates to target cell
 - **Collision Detection**: Prevents movement through walls
 - **Boundary Checking**: Keeps player within grid limits
+- **Auto-Refocus**: Keydown events automatically refocus the canvas for uninterrupted play
 - **Cooldown System**: Prevents excessive movement when holding keys
+- **Pixel-Perfect Death**: Player position is accurately updated to the collision cell on game-over triggers
 
 #### AI Pathfinding
 ```javascript
@@ -175,9 +183,11 @@ We welcome contributions! Here's how you can help:
 ### Suggested Improvements
 - [ ] Add sound effects and background music
 - [ ] Implement mobile touch controls
+- [x] Enhanced player visibility for all grid sizes
+- [x] Auto-refocus canvas on key press
+- [x] Local storage for High Scores persistence
 - [ ] Add different alien types with unique behaviors
 - [ ] Create power-ups and special abilities
-- [ ] Add a high score system with local storage
 - [ ] Implement different game modes (time attack, survival, etc.)
 - [ ] Add particle effects for explosions and movement
 - [ ] Create a level progression system
